@@ -30,45 +30,49 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: '40px auto' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700 }}>Login</h1>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900 text-center">SIPANTAU JAKON</h1>
+          <p className="text-sm text-slate-600 text-center">Silakan login untuk masuk dashboard.</p>
+        </div>
 
-      <form onSubmit={handleLogin} style={{ marginTop: 16, display: 'grid', gap: 12 }}>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Email</span>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@contoh.com"
-            style={{ padding: 10, border: '1px solid #ccc', borderRadius: 8 }}
-          />
-        </label>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-slate-700">Email</label>
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@contoh.com"
+            />
+          </div>
 
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="password"
-            style={{ padding: 10, border: '1px solid #ccc', borderRadius: 8 }}
-          />
-        </label>
+          <div>
+            <label className="text-sm font-medium text-slate-700">Password</label>
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-slate-900/10"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
 
-        {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
+          {errorMsg && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {errorMsg}
+            </div>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: 10,
-            borderRadius: 8,
-            border: '1px solid #000',
-            cursor: 'pointer',
-          }}>
-          {loading ? 'Loading...' : 'Masuk'}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-white font-semibold hover:bg-slate-800 disabled:opacity-60">
+            {loading ? 'Loading...' : 'Masuk'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
