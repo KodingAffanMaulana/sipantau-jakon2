@@ -1,35 +1,60 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
 type Status = 'tertib' | 'belum_tertib';
+type Role = 'admin' | 'user';
+
+type StatusOption = {
+  value: Status;
+  label: string;
+};
+
+type FormState = {
+  nib: string;
+  nama_badan_usaha: string;
+  pjbu: string;
+  jenis: Status;
+  sifat: Status;
+  klasifikasi: Status;
+  layanan: Status;
+  bentuk: Status;
+  kualifikasi: Status;
+  sbu: Status;
+  nib_persyaratan: Status;
+  peningkatan_kapasitas_sdm: Status;
+  peningkatan_peralatan: Status;
+  peningkatan_teknologi: Status;
+  peningkatan_kualitas_keuangan: Status;
+  peningkatan_manajemen_usaha: Status;
+};
 
 export default function TambahRekapBujkPage() {
   const router = useRouter();
-  const [role, setRole] = useState<'admin' | 'user' | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     nib: '',
     nama_badan_usaha: '',
     pjbu: '',
-    jenis: 'tertib' as Status,
-    sifat: 'tertib' as Status,
-    klasifikasi: 'tertib' as Status,
-    layanan: 'tertib' as Status,
-    bentuk: 'tertib' as Status,
-    kualifikasi: 'tertib' as Status,
-    sbu: 'tertib' as Status,
-    nib_persyaratan: 'tertib' as Status,
-    peningkatan_kapasitas_sdm: 'tertib' as Status,
-    peningkatan_peralatan: 'tertib' as Status,
-    peningkatan_teknologi: 'tertib' as Status,
-    peningkatan_kualitas_keuangan: 'tertib' as Status,
-    peningkatan_manajemen_usaha: 'tertib' as Status,
+    jenis: 'tertib',
+    sifat: 'tertib',
+    klasifikasi: 'tertib',
+    layanan: 'tertib',
+    bentuk: 'tertib',
+    kualifikasi: 'tertib',
+    sbu: 'tertib',
+    nib_persyaratan: 'tertib',
+    peningkatan_kapasitas_sdm: 'tertib',
+    peningkatan_peralatan: 'tertib',
+    peningkatan_teknologi: 'tertib',
+    peningkatan_kualitas_keuangan: 'tertib',
+    peningkatan_manajemen_usaha: 'tertib',
   });
 
   async function loadRoleAndGuard() {
@@ -50,10 +75,9 @@ export default function TambahRekapBujkPage() {
       return;
     }
 
-    const r = (data?.role as any) ?? null;
+    const r = (data?.role as Role | null) ?? null;
     setRole(r);
 
-    // guard: kalau bukan admin, balik ke rekap
     if (r !== 'admin') {
       router.push('/tertib-usaha');
       router.refresh();
@@ -61,10 +85,10 @@ export default function TambahRekapBujkPage() {
   }
 
   useEffect(() => {
-    loadRoleAndGuard();
+    void loadRoleAndGuard();
   }, []);
 
-  const statusOptions = useMemo(
+  const statusOptions = useMemo<StatusOption[]>(
     () => [
       { value: 'tertib', label: 'Tertib' },
       { value: 'belum_tertib', label: 'Belum Tertib' },
@@ -75,8 +99,7 @@ export default function TambahRekapBujkPage() {
   async function submit() {
     setMsg(null);
 
-    // validasi minimal
-    if (!form.nib || !form.nama_badan_usaha || !form.pjbu) {
+    if (!form.nib.trim() || !form.nama_badan_usaha.trim() || !form.pjbu.trim()) {
       setMsg('NIB, Nama Badan Usaha, dan PJBU wajib diisi.');
       return;
     }
@@ -86,10 +109,15 @@ export default function TambahRekapBujkPage() {
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth.user?.id;
 
-    const { error } = await supabase.from('rekap_bujk').insert({
+    const payload = {
       created_by: uid ?? null,
       ...form,
-    });
+      nib: form.nib.trim(),
+      nama_badan_usaha: form.nama_badan_usaha.trim(),
+      pjbu: form.pjbu.trim(),
+    };
+
+    const { error } = await supabase.from('rekap_bujk').insert(payload);
 
     setLoading(false);
 
@@ -103,7 +131,6 @@ export default function TambahRekapBujkPage() {
     router.refresh();
   }
 
-  // biar tidak “kedip” sebelum role kebaca
   if (role === null) {
     return <div className="min-h-screen bg-slate-100 p-6">Loading...</div>;
   }
@@ -124,7 +151,7 @@ export default function TambahRekapBujkPage() {
             </p>
           </div>
 
-          <span className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 border">
+          <span className="rounded-full border bg-white px-3 py-1 text-sm text-slate-700">
             Role: <span className="font-semibold">{role}</span>
           </span>
         </div>
@@ -280,7 +307,7 @@ function Select({
   label: string;
   value: Status;
   onChange: (v: Status) => void;
-  options: { value: Status; label: string }[];
+  options: StatusOption[];
 }) {
   return (
     <label className="grid gap-1">
@@ -290,7 +317,7 @@ function Select({
         onChange={(e) => onChange(e.target.value as Status)}
         className="rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600/20">
         {options.map((opt) => (
-          <option key={opt.value ?? 'null'} value={opt.value ?? ''}>
+          <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
         ))}
@@ -299,7 +326,7 @@ function Select({
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="rounded-2xl border border-slate-200 p-4">
       <div className="mb-3 text-sm font-semibold text-slate-900">{title}</div>

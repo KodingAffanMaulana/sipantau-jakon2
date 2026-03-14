@@ -1,32 +1,52 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
 type Status = 'tertib' | 'belum_tertib';
+type Role = 'admin' | 'user';
+
+type OptionStatus = {
+  value: Status;
+  label: string;
+};
+
+type FormState = {
+  nama_bangunan_konstruksi: string;
+  nomor_kontrak_pembangunan: string;
+  lokasi: string;
+  tanggal_tahun_pembangunan: string;
+  tanggal_tahun_pemanfaatan: string;
+  umur_konstruksi: string;
+  kesesuaian_fungsi: Status;
+  kesesuaian_lokasi: Status;
+  rencana_umur_konstruksi: Status;
+  kapasitas_dan_beban: Status;
+  pemeliharaan_bangunan: Status;
+  program_pemeliharaan: Status;
+};
 
 export default function TambahPemanfaatanPage() {
   const router = useRouter();
-  const [role, setRole] = useState<'admin' | 'user' | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     nama_bangunan_konstruksi: '',
     nomor_kontrak_pembangunan: '',
     lokasi: '',
     tanggal_tahun_pembangunan: '',
     tanggal_tahun_pemanfaatan: '',
     umur_konstruksi: '',
-
-    kesesuaian_fungsi: 'tertib' as Status,
-    kesesuaian_lokasi: 'tertib' as Status,
-    rencana_umur_konstruksi: 'tertib' as Status,
-    kapasitas_dan_beban: 'tertib' as Status,
-    pemeliharaan_bangunan: 'tertib' as Status,
-    program_pemeliharaan: 'tertib' as Status,
+    kesesuaian_fungsi: 'tertib',
+    kesesuaian_lokasi: 'tertib',
+    rencana_umur_konstruksi: 'tertib',
+    kapasitas_dan_beban: 'tertib',
+    pemeliharaan_bangunan: 'tertib',
+    program_pemeliharaan: 'tertib',
   });
 
   async function guardAdmin() {
@@ -40,13 +60,14 @@ export default function TambahPemanfaatanPage() {
     }
 
     const { data, error } = await supabase.from('profiles').select('role').eq('id', uid).single();
+
     if (error) {
       setRole(null);
       router.push('/pemanfaatan');
       return;
     }
 
-    const r = (data?.role as any) ?? null;
+    const r = (data?.role as Role | null) ?? null;
     setRole(r);
 
     if (r !== 'admin') {
@@ -56,13 +77,13 @@ export default function TambahPemanfaatanPage() {
   }
 
   useEffect(() => {
-    guardAdmin();
+    void guardAdmin();
   }, []);
 
-  const options = useMemo(
+  const options = useMemo<OptionStatus[]>(
     () => [
-      { value: 'tertib' as Status, label: 'Tertib' },
-      { value: 'belum_tertib' as Status, label: 'Belum Tertib' },
+      { value: 'tertib', label: 'Tertib' },
+      { value: 'belum_tertib', label: 'Belum Tertib' },
     ],
     [],
   );
@@ -70,7 +91,11 @@ export default function TambahPemanfaatanPage() {
   async function submit() {
     setMsg(null);
 
-    if (!form.nama_bangunan_konstruksi || !form.nomor_kontrak_pembangunan || !form.lokasi) {
+    if (
+      !form.nama_bangunan_konstruksi.trim() ||
+      !form.nomor_kontrak_pembangunan.trim() ||
+      !form.lokasi.trim()
+    ) {
       setMsg('Nama Bangunan, Nomor Kontrak, dan Lokasi wajib diisi.');
       return;
     }
@@ -80,10 +105,18 @@ export default function TambahPemanfaatanPage() {
     const { data: auth } = await supabase.auth.getUser();
     const uid = auth.user?.id;
 
-    const { error } = await supabase.from('tertib_pemanfaatan').insert({
+    const payload = {
       created_by: uid ?? null,
       ...form,
-    });
+      nama_bangunan_konstruksi: form.nama_bangunan_konstruksi.trim(),
+      nomor_kontrak_pembangunan: form.nomor_kontrak_pembangunan.trim(),
+      lokasi: form.lokasi.trim(),
+      tanggal_tahun_pembangunan: form.tanggal_tahun_pembangunan.trim(),
+      tanggal_tahun_pemanfaatan: form.tanggal_tahun_pemanfaatan.trim(),
+      umur_konstruksi: form.umur_konstruksi.trim(),
+    };
+
+    const { error } = await supabase.from('tertib_pemanfaatan').insert(payload);
 
     setLoading(false);
 
@@ -96,7 +129,16 @@ export default function TambahPemanfaatanPage() {
     router.refresh();
   }
 
-  if (role === null) return <div className="min-h-screen bg-slate-100 p-6">Loading...</div>;
+  if (role === null) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-slate-600 font-medium">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -112,7 +154,7 @@ export default function TambahPemanfaatanPage() {
             <p className="text-sm text-slate-600">Input data pengawasan pemanfaatan.</p>
           </div>
 
-          <span className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 border">
+          <span className="rounded-full border bg-white px-3 py-1 text-sm text-slate-700">
             Role: <span className="font-semibold">{role}</span>
           </span>
         </div>
@@ -128,6 +170,7 @@ export default function TambahPemanfaatanPage() {
             />
             <Input
               label="Nomor Kontrak (Pembangunan)"
+              placeholder="Silahkan isi data"
               value={form.nomor_kontrak_pembangunan}
               onChange={(v) => setForm({ ...form, nomor_kontrak_pembangunan: v })}
             />
@@ -136,7 +179,6 @@ export default function TambahPemanfaatanPage() {
               value={form.lokasi}
               onChange={(v) => setForm({ ...form, lokasi: v })}
             />
-
             <Input
               label="Tanggal & Tahun Pembangunan"
               value={form.tanggal_tahun_pembangunan}
@@ -205,7 +247,7 @@ export default function TambahPemanfaatanPage() {
             <button
               onClick={submit}
               disabled={loading}
-              className="rounded-xl bg-blue-600 px-4 py-2.5 text-white font-semibold shadow hover:bg-blue-700 disabled:opacity-60">
+              className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-60">
               {loading ? 'Menyimpan...' : 'Simpan'}
             </button>
 
@@ -221,16 +263,19 @@ function Input({
   label,
   value,
   onChange,
+  placeholder = 'Silahkan isi data',
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
 }) {
   return (
     <label className="grid gap-1">
       <span className="text-sm font-medium text-slate-700">{label}</span>
       <input
         value={value}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600/20"
       />
@@ -247,7 +292,7 @@ function Select({
   label: string;
   value: Status;
   onChange: (v: Status) => void;
-  options: { value: Status; label: string }[];
+  options: OptionStatus[];
 }) {
   return (
     <label className="grid gap-1">
@@ -266,7 +311,7 @@ function Select({
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="rounded-2xl border border-slate-200 p-4">
       <div className="mb-3 text-sm font-semibold text-slate-900">{title}</div>

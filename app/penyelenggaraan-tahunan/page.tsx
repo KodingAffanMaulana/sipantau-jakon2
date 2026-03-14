@@ -37,7 +37,7 @@ type Row = {
 
 function labelStatus(v: Status) {
   if (v === 'tertib') return 'Tertib';
-  if (v === 'belum_tertib') return 'Belum Tertib';
+  if (v === 'belum_tertib') return 'Tidak Tertib';
   return '-';
 }
 
@@ -58,6 +58,7 @@ function overallStatus(row: Row): 'tertib' | 'belum_tertib' {
     row.penerapan_smkk,
     row.kegiatan_antisipasi_kecelakaan,
   ];
+
   return fields.some((f) => f === 'belum_tertib') ? 'belum_tertib' : 'tertib';
 }
 
@@ -77,7 +78,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
 
     const { data, error } = await supabase.from('profiles').select('role').eq('id', uid).single();
     if (error) setRole(null);
-    else setRole((data?.role as any) ?? null);
+    else setRole((data?.role as 'admin' | 'user' | null) ?? null);
   }
 
   async function loadData() {
@@ -115,7 +116,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
       return;
     }
 
-    setRows((data ?? []) as any);
+    setRows((data ?? []) as Row[]);
   }
 
   useEffect(() => {
@@ -140,8 +141,8 @@ export default function RekapPenyelenggaraanTahunanPage() {
     try {
       const XLSX = await import('xlsx');
 
-      const dataForExcel = filteredRows.map((r) => ({
-        No: r.no ?? '',
+      const dataForExcel = filteredRows.map((r, index) => ({
+        No: index + 1,
         'Kegiatan Konstruksi (Nama Paket)': r.kegiatan_konstruksi,
         'Nomor Kontrak': r.nomor_kontrak,
         'Nama BUJK': r.nama_bujk,
@@ -170,7 +171,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
         'SMKK - Penerapan': labelStatus(r.penerapan_smkk),
         'Antisipasi kecelakaan kerja': labelStatus(r.kegiatan_antisipasi_kecelakaan),
 
-        'Status Keseluruhan': overallStatus(r),
+        'Status Keseluruhan': overallStatus(r) === 'tertib' ? 'Tertib' : 'Tidak Tertib',
       }));
 
       const ws = XLSX.utils.json_to_sheet(dataForExcel);
@@ -186,7 +187,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
     }
   }
 
-  async function deleteRow(row: Row) {
+  async function deleteRow(row: Row, displayNo: number) {
     setMsg(null);
 
     if (role !== 'admin') {
@@ -195,7 +196,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
     }
 
     const ok = window.confirm(
-      `Hapus data?\n\nNo: ${row.no ?? '-'}\nKontrak: ${row.nomor_kontrak}\nBUJK: ${row.nama_bujk}`,
+      `Hapus data?\n\nNo: ${displayNo}\nKontrak: ${row.nomor_kontrak}\nBUJK: ${row.nama_bujk}`,
     );
     if (!ok) return;
 
@@ -203,6 +204,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
       .from('rekap_penyelenggaraan_tahunan')
       .delete()
       .eq('id', row.id);
+
     if (error) {
       setMsg(`Gagal hapus: ${error.message}`);
       return;
@@ -218,6 +220,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
         <Link href="/dashboard" className="text-sm text-blue-700 hover:underline">
           ← Kembali ke Dashboard
         </Link>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
@@ -227,25 +230,24 @@ export default function RekapPenyelenggaraanTahunanPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 border">
+            <span className="rounded-full border bg-white px-3 py-1 text-sm text-slate-700">
               Role: <span className="font-semibold">{role ?? '-'}</span>
             </span>
 
             {role === 'admin' && (
               <Link
                 href="/penyelenggaraan-tahunan/tambah"
-                className="rounded-xl bg-blue-600 px-4 py-2 text-white font-semibold shadow hover:bg-blue-700">
+                className="rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700">
                 + Tambah Data
               </Link>
             )}
           </div>
         </div>
 
-        {/* Controls */}
         <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="text-sm font-semibold text-slate-900">Pencarian</div>
-            <p className="text-xs text-slate-600 mt-1">Nama BUJK / Nomor Kontrak / Nama Paket</p>
+            <p className="mt-1 text-xs text-slate-600">Nama BUJK / Nomor Kontrak / Nama Paket</p>
 
             <div className="mt-3 flex gap-2">
               <input
@@ -256,7 +258,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
               />
               <button
                 onClick={loadData}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-white font-semibold hover:bg-slate-800">
+                className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white hover:bg-slate-800">
                 Cari
               </button>
             </div>
@@ -264,8 +266,8 @@ export default function RekapPenyelenggaraanTahunanPage() {
 
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="text-sm font-semibold text-slate-900">Filter Status Keseluruhan</div>
-            <p className="text-xs text-slate-600 mt-1">
-              Belum tertib jika ada minimal 1 kolom belum tertib.
+            <p className="mt-1 text-xs text-slate-600">
+              Tidak tertib jika ada minimal 1 kolom tidak tertib.
             </p>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -276,7 +278,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
                 Tertib
               </Pill>
               <Pill active={filter === 'belum_tertib'} onClick={() => setFilter('belum_tertib')}>
-                Belum Tertib
+                Tidak Tertib
               </Pill>
             </div>
 
@@ -289,13 +291,13 @@ export default function RekapPenyelenggaraanTahunanPage() {
 
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="text-sm font-semibold text-slate-900">Export</div>
-            <p className="text-xs text-slate-600 mt-1">
+            <p className="mt-1 text-xs text-slate-600">
               Export sesuai data yang sedang tampil (search+filter).
             </p>
 
             <button
               onClick={exportExcel}
-              className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-white font-semibold shadow hover:bg-emerald-700">
+              className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-2.5 font-semibold text-white shadow hover:bg-emerald-700">
               Export Excel (.xlsx)
             </button>
 
@@ -311,8 +313,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
           <div className="mt-4 rounded-xl border bg-white p-3 text-sm text-slate-700">{msg}</div>
         )}
 
-        {/* Table */}
-        <div className="mt-6 rounded-2xl border bg-white shadow-sm overflow-hidden">
+        <div className="mt-6 overflow-hidden rounded-2xl border bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-[2100px] w-full border-collapse text-sm">
               <thead>
@@ -321,7 +322,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
                   <Th rowSpan={2}>Kegiatan Konstruksi (Nama Paket)</Th>
                   <Th rowSpan={2}>Nomor Kontrak</Th>
                   <Th rowSpan={2}>Nama BUJK</Th>
-                  <Th rowSpan={2}>Penerapan SMM</Th>
+                  <Th rowSpan={2}>Sistem Manajemen Mutu Konstruksi</Th>
 
                   <Th colSpan={3}>Pengelolaan & Penggunaan Material/Peralatan/Teknologi</Th>
                   <Th colSpan={3}>Pengelolaan & Pemanfaatan Sumber Material</Th>
@@ -363,14 +364,16 @@ export default function RekapPenyelenggaraanTahunanPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredRows.map((r) => {
+                    {filteredRows.map((r, index) => {
                       const ov = overallStatus(r);
+                      const displayNo = index + 1;
+
                       return (
                         <tr
                           key={r.id}
-                          className="odd:bg-white even:bg-slate-50 hover:bg-blue-50 transition">
-                          <Td>{r.no ?? '-'}</Td>
-                          <Td className="whitespace-normal">{r.kegiatan_konstruksi}</Td>
+                          className="transition odd:bg-white even:bg-slate-50 hover:bg-blue-50 text-center">
+                          <Td>{displayNo}</Td>
+                          <Td className="whitespace-normal text-start">{r.kegiatan_konstruksi}</Td>
                           <Td>{r.nomor_kontrak}</Td>
                           <Td>{r.nama_bujk}</Td>
 
@@ -402,14 +405,14 @@ export default function RekapPenyelenggaraanTahunanPage() {
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-rose-100 text-rose-800',
                               ].join(' ')}>
-                              {ov === 'tertib' ? 'Tertib' : 'Belum Tertib'}
+                              {ov === 'tertib' ? 'Tertib' : 'Tidak Tertib'}
                             </span>
                           </Td>
 
                           <Td>
                             {role === 'admin' ? (
                               <button
-                                onClick={() => deleteRow(r)}
+                                onClick={() => deleteRow(r, displayNo)}
                                 className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700">
                                 Hapus
                               </button>
@@ -434,7 +437,7 @@ export default function RekapPenyelenggaraanTahunanPage() {
             </table>
           </div>
 
-          <div className="px-4 py-3 text-xs text-slate-500 bg-slate-50 border-t">
+          <div className="border-t bg-slate-50 px-4 py-3 text-xs text-slate-500">
             * Di layar kecil, geser tabel ke samping (scroll horizontal).
           </div>
         </div>
@@ -456,10 +459,10 @@ function Pill({
     <button
       onClick={onClick}
       className={[
-        'rounded-full px-3 py-1 text-xs font-semibold border',
+        'rounded-full border px-3 py-1 text-xs font-semibold',
         active
-          ? 'bg-blue-600 text-white border-blue-600'
-          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50',
+          ? 'border-blue-600 bg-blue-600 text-white'
+          : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
       ].join(' ')}>
       {children}
     </button>
@@ -486,7 +489,7 @@ function Th({
 }) {
   return (
     <th
-      className="border border-sky-600 px-3 py-2 text-center align-middle font-semibold whitespace-nowrap"
+      className="whitespace-nowrap border border-sky-600 px-3 py-2 text-center align-middle font-semibold"
       colSpan={colSpan}
       rowSpan={rowSpan}>
       {children}
@@ -496,7 +499,7 @@ function Th({
 
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <td className={`border border-slate-200 px-3 py-2 whitespace-nowrap ${className}`}>
+    <td className={`whitespace-nowrap border border-slate-200 px-3 py-2 ${className}`}>
       {children}
     </td>
   );

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
-type Status = 'tertib' | 'belum_tertib';
+type Status = 'tertib' | 'belum_tertib' | null;
 
 export default function TambahPenyelenggaraanTahunanPage() {
   const router = useRouter();
@@ -18,25 +18,25 @@ export default function TambahPenyelenggaraanTahunanPage() {
     nomor_kontrak: '',
     nama_bujk: '',
 
-    penerapan_smm_konstruksi: 'tertib' as Status,
+    penerapan_smm_konstruksi: null as Status,
 
-    pemenuhan_penyediaan_peralatan: 'tertib' as Status,
-    penggunaan_material_standar: 'tertib' as Status,
-    penggunaan_produk_dalam_negeri: 'tertib' as Status,
+    pemenuhan_penyediaan_peralatan: null as Status,
+    penggunaan_material_standar: null as Status,
+    penggunaan_produk_dalam_negeri: null as Status,
 
-    pemenuhan_standar_mutu_material: 'tertib' as Status,
-    pemenuhan_standar_teknis_lingkungan: 'tertib' as Status,
-    pemenuhan_standar_k3: 'tertib' as Status,
+    pemenuhan_standar_mutu_material: null as Status,
+    pemenuhan_standar_teknis_lingkungan: null as Status,
+    pemenuhan_standar_k3: null as Status,
 
-    proses_pemilihan_penyedia: 'tertib' as Status,
+    proses_pemilihan_penyedia: null as Status,
 
-    penerapan_standar_kontrak: 'tertib' as Status,
-    penggunaan_tenaga_kerja_bersertifikat: 'tertib' as Status,
-    pemberian_pekerjaan_ke_subpenyedia: 'tertib' as Status,
+    penerapan_standar_kontrak: null as Status,
+    penggunaan_tenaga_kerja_bersertifikat: null as Status,
+    pemberian_pekerjaan_ke_subpenyedia: null as Status,
 
-    ketersediaan_dokumen_k4: 'tertib' as Status,
-    penerapan_smkk: 'tertib' as Status,
-    kegiatan_antisipasi_kecelakaan: 'tertib' as Status,
+    ketersediaan_dokumen_k4: null as Status,
+    penerapan_smkk: null as Status,
+    kegiatan_antisipasi_kecelakaan: null as Status,
   });
 
   async function guardAdmin() {
@@ -50,13 +50,14 @@ export default function TambahPenyelenggaraanTahunanPage() {
     }
 
     const { data, error } = await supabase.from('profiles').select('role').eq('id', uid).single();
+
     if (error) {
       setRole(null);
       router.push('/penyelenggaraan-tahunan');
       return;
     }
 
-    const r = (data?.role as any) ?? null;
+    const r = (data?.role as 'admin' | 'user' | null) ?? null;
     setRole(r);
 
     if (r !== 'admin') {
@@ -72,7 +73,8 @@ export default function TambahPenyelenggaraanTahunanPage() {
   const options = useMemo(
     () => [
       { value: 'tertib' as Status, label: 'Tertib' },
-      { value: 'belum_tertib' as Status, label: 'Belum Tertib' },
+      { value: 'belum_tertib' as Status, label: 'Tidak Tertib' },
+      { value: null as Status, label: '-' },
     ],
     [],
   );
@@ -80,7 +82,7 @@ export default function TambahPenyelenggaraanTahunanPage() {
   async function submit() {
     setMsg(null);
 
-    if (!form.kegiatan_konstruksi || !form.nomor_kontrak || !form.nama_bujk) {
+    if (!form.kegiatan_konstruksi.trim() || !form.nomor_kontrak.trim() || !form.nama_bujk.trim()) {
       setMsg('Kegiatan Konstruksi, Nomor Kontrak, dan Nama BUJK wajib diisi.');
       return;
     }
@@ -92,7 +94,24 @@ export default function TambahPenyelenggaraanTahunanPage() {
 
     const { error } = await supabase.from('rekap_penyelenggaraan_tahunan').insert({
       created_by: uid ?? null,
-      ...form,
+      kegiatan_konstruksi: form.kegiatan_konstruksi.trim(),
+      nomor_kontrak: form.nomor_kontrak.trim(),
+      nama_bujk: form.nama_bujk.trim(),
+
+      penerapan_smm_konstruksi: form.penerapan_smm_konstruksi,
+      pemenuhan_penyediaan_peralatan: form.pemenuhan_penyediaan_peralatan,
+      penggunaan_material_standar: form.penggunaan_material_standar,
+      penggunaan_produk_dalam_negeri: form.penggunaan_produk_dalam_negeri,
+      pemenuhan_standar_mutu_material: form.pemenuhan_standar_mutu_material,
+      pemenuhan_standar_teknis_lingkungan: form.pemenuhan_standar_teknis_lingkungan,
+      pemenuhan_standar_k3: form.pemenuhan_standar_k3,
+      proses_pemilihan_penyedia: form.proses_pemilihan_penyedia,
+      penerapan_standar_kontrak: form.penerapan_standar_kontrak,
+      penggunaan_tenaga_kerja_bersertifikat: form.penggunaan_tenaga_kerja_bersertifikat,
+      pemberian_pekerjaan_ke_subpenyedia: form.pemberian_pekerjaan_ke_subpenyedia,
+      ketersediaan_dokumen_k4: form.ketersediaan_dokumen_k4,
+      penerapan_smkk: form.penerapan_smkk,
+      kegiatan_antisipasi_kecelakaan: form.kegiatan_antisipasi_kecelakaan,
     });
 
     setLoading(false);
@@ -106,7 +125,9 @@ export default function TambahPenyelenggaraanTahunanPage() {
     router.refresh();
   }
 
-  if (role === null) return <div className="min-h-screen bg-slate-100 p-6">Loading...</div>;
+  if (role === null) {
+    return <div className="min-h-screen bg-slate-100 p-6">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -118,11 +139,11 @@ export default function TambahPenyelenggaraanTahunanPage() {
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-slate-900">Tambah Data - Rekap Tahunan</h1>
             <p className="text-sm text-slate-600">
-              Input status tertib / belum tertib sesuai form.
+              Input status tertib / tidak tertib / - sesuai form.
             </p>
           </div>
 
-          <span className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 border">
+          <span className="rounded-full border bg-white px-3 py-1 text-sm text-slate-700">
             Role: <span className="font-semibold">{role}</span>
           </span>
         </div>
@@ -151,7 +172,7 @@ export default function TambahPenyelenggaraanTahunanPage() {
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
             <Group title="Penerapan Sistem Manajemen Mutu Konstruksi">
               <Select
-                label="Penerapan SMM"
+                label="Penerapan Sistem Manajemen Mutu Konstruksi"
                 value={form.penerapan_smm_konstruksi}
                 onChange={(v) => setForm({ ...form, penerapan_smm_konstruksi: v })}
                 options={options}
@@ -253,7 +274,7 @@ export default function TambahPenyelenggaraanTahunanPage() {
             <button
               onClick={submit}
               disabled={loading}
-              className="rounded-xl bg-blue-600 px-4 py-2.5 text-white font-semibold shadow hover:bg-blue-700 disabled:opacity-60">
+              className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-60">
               {loading ? 'Menyimpan...' : 'Simpan'}
             </button>
 
@@ -279,6 +300,7 @@ function Input({
       <span className="text-sm font-medium text-slate-700">{label}</span>
       <input
         value={value}
+        placeholder="Silahkan isi data"
         onChange={(e) => onChange(e.target.value)}
         className="rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600/20"
       />
@@ -301,11 +323,18 @@ function Select({
     <label className="grid gap-1">
       <span className="text-sm font-medium text-slate-700">{label}</span>
       <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as Status)}
-        className="rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600/20">
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+        value={value ?? ''}
+        onChange={(e) => onChange((e.target.value || null) as Status)}
+        className={[
+          'rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600/20',
+          value === 'tertib'
+            ? 'border-emerald-300 text-emerald-700'
+            : value === 'belum_tertib'
+              ? 'border-rose-300 text-rose-700'
+              : 'border-slate-300 text-slate-500',
+        ].join(' ')}>
+        {options.map((opt, i) => (
+          <option key={`${String(opt.value)}-${i}`} value={opt.value ?? ''}>
             {opt.label}
           </option>
         ))}

@@ -109,8 +109,13 @@ export default function TertibPemanfaatanPage() {
   }, []);
 
   const filteredRows = useMemo(() => {
-    if (filter === 'all') return rows;
-    return rows.filter((r) => overallStatus(r) === filter);
+    const base = filter === 'all' ? rows : rows.filter((r) => overallStatus(r) === filter);
+
+    return [...base].sort((a, b) => {
+      const noA = a.no ?? Number.MAX_SAFE_INTEGER;
+      const noB = b.no ?? Number.MAX_SAFE_INTEGER;
+      return noA - noB;
+    });
   }, [rows, filter]);
 
   const stats = useMemo(() => {
@@ -320,13 +325,13 @@ export default function TertibPemanfaatanPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredRows.map((r) => {
+                    {filteredRows.map((r, index) => {
                       const ov = overallStatus(r);
                       return (
                         <tr
                           key={r.id}
                           className="odd:bg-white even:bg-slate-50 hover:bg-blue-50 transition">
-                          <Td>{r.no ?? '-'}</Td>
+                          <Td>{index + 1}</Td>
                           <Td className="whitespace-normal">{r.nama_bangunan_konstruksi}</Td>
                           <Td>{r.nomor_kontrak_pembangunan}</Td>
                           <Td>{r.lokasi}</Td>
@@ -369,7 +374,6 @@ export default function TertibPemanfaatanPage() {
                         </tr>
                       );
                     })}
-
                     {filteredRows.length === 0 && (
                       <tr>
                         <td colSpan={14} className="p-8 text-center text-slate-600">
